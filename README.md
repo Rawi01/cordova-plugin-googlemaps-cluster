@@ -21,7 +21,7 @@ npm install --save git+https://github.com/Rawi01/cordova-plugin-googlemaps-clust
 
 # Usage
 
-```
+```javascript
 //Create your map
 this.map = new GoogleMap(this.mapElement.nativeElement, {
   'backgroundColor': 'white',
@@ -40,26 +40,31 @@ this.map = new GoogleMap(this.mapElement.nativeElement, {
 });
 //Create your marker cluster
 this.markerCluster = new MarkerCluster(this.map, {
-  //Distance between cluster center and markers
+  //Distance between cluster center and markers, a higher value leads to less clusters
   mergeDistance: 0.2,
   //Distance modifier, change the distance on zoom change. Gets multiplied by zoom and added to merge distance.
   mergeDistanceModifier: 0,
-  //Sets the maximum zoom for marker clicks
+  //Sets the maximum zoom level that should be set after tapping a cluster
   maxZoom: 20,
-  //Starts spiderfy at this zoom level
+  //Starts spiderfy markers at this zoom level, use a big value to disable spiderfy
   spiderfyZoom: 18,
-  //Stop clustering after this zoomlevel
+  //Stop clustering at this zoom level(show all markers), use a big value to cluster always
   maxClusterZoom: 99,
-  //Function that have to return an image for the cluster
+  //Function that have to return a path for the cluster image or a base64 encoded data url.
+  //You can generate one based on the cluster data using an canvas to draw and call toDataURL() to get the image
   clusterIcon: (cluster) => this.getMarkerImage(cluster)
 });
 
-//Add markers
+//Add markers to the cluster
 this.markerCluster.addMarker(markers);
+
+//To refresh the map
+this.markerCluster.refresh();
 
 ```
 # Todo
 
 * Add to `npm`
+* Documentation
 * Check dependencies (dev/peer)
 * Tests

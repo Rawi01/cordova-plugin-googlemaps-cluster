@@ -2,4 +2,4 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var cluster_1 = require("./cluster");
 exports.Cluster = cluster_1.Cluster;
-exports.ClusterMarker = cluster_1.ClusterMarker;
+exports.MarkerCluster = cluster_1.MarkerCluster;

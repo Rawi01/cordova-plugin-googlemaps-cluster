@@ -31,7 +31,7 @@ export declare class Cluster {
     getCenterPoint(): Point;
     addMarker(marker: MarkerObject): void;
 }
-export interface ClusterMarkerOptions {
+export interface MarkerClusterOptions {
     mergeDistance?: any;
     mergeDistanceModifier?: any;
     maxZoom?: any;
@@ -40,7 +40,7 @@ export interface ClusterMarkerOptions {
     itemToMarker?: any;
     clusterIcon?: any;
 }
-export declare class ClusterMarker {
+export declare class MarkerCluster {
     map: GoogleMap;
     private options;
     private markerObjectList;
@@ -54,7 +54,7 @@ export declare class ClusterMarker {
     private spiderfiedMarkers;
     private spiderfiedCluster;
     private spiderfiedClusterClicked;
-    constructor(map: GoogleMap, options: ClusterMarkerOptions);
+    constructor(map: GoogleMap, options: MarkerClusterOptions);
     bufferCameraChange(camera: CameraPosition): void;
     handleCameraChange(camera: CameraPosition): void;
     spiderfy(marker: Marker, cluster: Cluster): void;
@@ -67,5 +67,5 @@ export declare class ClusterMarker {
     refresh(): void;
     clusterAtScale(scale: any): Cluster[];
     private clusterAtScale2(scale, markerList);
-    private zoomToWithPadding(positions);
+    zoomToWithPadding(positions: LatLng[]): void;
 }

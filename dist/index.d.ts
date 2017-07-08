@@ -1,1 +1,1 @@
-export { Cluster, ClusterMarker, ClusterMarkerOptions } from './cluster';
+export { Cluster, MarkerCluster, MarkerClusterOptions } from './cluster';

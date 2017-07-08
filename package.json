@@ -1,0 +1,39 @@
+{
+  "name": "cordova-plugin-googlemaps-cluster",
+  "version": "0.1.0",
+  "description": "Cluster plugin for Cordova Googlemaps",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rawi01/cordova-plugin-googlemaps-cluster.git"
+  },
+  "keywords": [
+    "cordova",
+    "ionic",
+    "cluster",
+    "marker",
+    "google maps",
+    "spiderfy"
+  ],
+  "author": "Rawi01 <Rawi01@users.noreply.github.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Rawi01/cordova-plugin-googlemaps-cluster/issues"
+  },
+  "homepage": "https://github.com/Rawi01/cordova-plugin-googlemaps-cluster#readme",
+  "dependencies": {
+    "@types/rbush": "2.0.2",
+    "rbush": "2.0.1"
+  },
+  "devDependencies": {
+    "@ionic-native/core": "3.12.1",
+    "@ionic-native/google-maps": "3.12.1",
+    "rxjs": "5.4.2"
+  },
+  "peerDependencies": {
+  }
+}

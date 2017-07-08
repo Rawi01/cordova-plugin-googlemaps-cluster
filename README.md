@@ -1,5 +1,7 @@
 # MarkerCluster plugin for Cordova GoogleMaps
 
+![example](https://user-images.githubusercontent.com/5850477/27987614-c1c67d10-6410-11e7-9a22-242bdbc0dbc7.png)
+
 This plugin adds marker cluster support to [Cordova GoogleMaps](https://github.com/mapsplugin/cordova-plugin-googlemaps).
 
 Only tested with Ionic 3, Android(iOS should work too) and Cordova GoogleMaps 1.4.

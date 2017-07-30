@@ -110,7 +110,9 @@ var MarkerCluster = (function () {
                 });
             }
         }, options);
-        map.on(google_maps_1.GoogleMapsEvent.CAMERA_CHANGE).debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
+        //Use strings instead of the constants to support v1 and v2
+        map.on("camera_change").debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
+        map.on("camera_move_end").debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
         map.on(google_maps_1.GoogleMapsEvent.MAP_CLOSE).take(1).subscribe(function () {
             console.log("Map closed");
         });
@@ -153,8 +155,9 @@ var MarkerCluster = (function () {
                 else {
                     return _this.map.addMarker({
                         position: cluster.getCenter(),
-                        icon: _this.options.clusterIcon(cluster),
-                        markerClick: function (marker) {
+                        icon: _this.options.clusterIcon(cluster)
+                    }).then(function (marker) {
+                        marker.on(google_maps_1.GoogleMapsEvent.MARKER_CLICK).subscribe(function () {
                             var latLng = cluster.getMarker().map(function (m) { return m.marker.position; });
                             if (_this.currentZoom < _this.options.spiderfyZoom) {
                                 _this.zoomToWithPadding(latLng);
@@ -163,7 +166,7 @@ var MarkerCluster = (function () {
                             else {
                                 _this.spiderfy(marker, cluster);
                             }
-                        }
+                        });
                     });
                 }
             });

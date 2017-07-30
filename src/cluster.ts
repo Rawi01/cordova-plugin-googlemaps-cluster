@@ -125,7 +125,9 @@ export class MarkerCluster {
         }
     }, options);
 
-    map.on(GoogleMapsEvent.CAMERA_CHANGE).debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
+    //Use strings instead of the constants to support v1 and v2
+    map.on("camera_change").debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
+    map.on("camera_move_end").debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
     map.on(GoogleMapsEvent.MAP_CLOSE).take(1).subscribe(() => {
       console.log("Map closed");
     });
@@ -166,8 +168,9 @@ export class MarkerCluster {
         } else {
           return this.map.addMarker({
             position: cluster.getCenter(),
-            icon: this.options.clusterIcon(cluster),
-            markerClick: (marker) => {
+            icon: this.options.clusterIcon(cluster)
+          }).then((marker: Marker) => {
+            marker.on(GoogleMapsEvent.MARKER_CLICK).subscribe(() => {
               let latLng = cluster.getMarker().map(m => m.marker.position);
 
               if(this.currentZoom < this.options.spiderfyZoom) {
@@ -176,7 +179,7 @@ export class MarkerCluster {
               } else {
                 this.spiderfy(marker, cluster);
               }
-            }
+            });
           })
         }
       });

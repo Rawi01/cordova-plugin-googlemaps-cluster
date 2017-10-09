@@ -99,24 +99,15 @@ var MarkerCluster = (function () {
             maxZoom: 20,
             spiderfyZoom: 18,
             maxClusterZoom: 99,
-            itemToMarker: function (item) {
-                return new google_maps_1.Marker({
-                    position: item
-                });
-            },
-            clusterIcon: function (cluster) {
-                return new google_maps_1.Marker({
-                    position: cluster.getCenter()
-                });
-            }
+            itemToMarker: function (item) { },
+            clusterIcon: function (cluster) { }
         }, options);
-        //Use strings instead of the constants to support v1 and v2
-        map.on("camera_change").debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
-        map.on("camera_move_end").debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
+        map.on(google_maps_1.GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
         map.on(google_maps_1.GoogleMapsEvent.MAP_CLOSE).take(1).subscribe(function () {
             console.log("Map closed");
         });
         map.on(google_maps_1.GoogleMapsEvent.MAP_CLICK).subscribe(function () { return _this.unspiderfy(); });
+        map.on(google_maps_1.GoogleMapsEvent.MAP_READY).take(1).subscribe(function () { return _this.redraw(); });
     }
     MarkerCluster.prototype.bufferCameraChange = function (camera) {
         var _this = this;
@@ -136,42 +127,55 @@ var MarkerCluster = (function () {
         else {
             this.unspiderfy();
         }
-        if (this.updateCluster(camera.zoom)) {
+        if (this.updateCluster(camera.zoom || camera[0].zoom)) {
             this.clearMap();
         }
-        this.map.getVisibleRegion().then(function (region) {
-            var botLeft = toPoint(region.southwest);
-            var topRight = toPoint(region.northeast);
-            var addedMarker = _this.cluster.filter(function (cluster) {
-                return !cluster.addedToMap
-                    && cluster.getCenterPoint().x >= botLeft.x && cluster.getCenterPoint().x <= topRight.x
-                    && cluster.getCenterPoint().y <= botLeft.y && cluster.getCenterPoint().y >= topRight.y;
-            }).map(function (cluster) {
-                var marker = cluster.getMarker();
-                cluster.addedToMap = true;
-                if (marker.length == 1) {
-                    return _this.map.addMarker(marker[0].marker);
-                }
-                else {
-                    return _this.map.addMarker({
-                        position: cluster.getCenter(),
-                        icon: _this.options.clusterIcon(cluster)
-                    }).then(function (marker) {
-                        marker.on(google_maps_1.GoogleMapsEvent.MARKER_CLICK).subscribe(function () {
-                            var latLng = cluster.getMarker().map(function (m) { return m.marker.position; });
-                            if (_this.currentZoom < _this.options.spiderfyZoom) {
-                                _this.zoomToWithPadding(latLng);
-                                //this.map.moveCamera({target: latLng})
-                            }
-                            else {
-                                _this.spiderfy(marker, cluster);
-                            }
+        var region = this.map.getVisibleRegion();
+        var botLeft = toPoint(region.southwest);
+        var topRight = toPoint(region.northeast);
+        var addedMarker = this.cluster.filter(function (cluster) {
+            return !cluster.addedToMap
+                && cluster.getCenterPoint().x >= botLeft.x && cluster.getCenterPoint().x <= topRight.x
+                && cluster.getCenterPoint().y <= botLeft.y && cluster.getCenterPoint().y >= topRight.y;
+        }).map(function (cluster) {
+            var marker = cluster.getMarker();
+            cluster.addedToMap = true;
+            if (marker.length == 1) {
+                var markerConfig_1 = marker[0].marker;
+                return _this.map.addMarker(markerConfig_1).then(function (mapMarker) {
+                    if (markerConfig_1.markerClick) {
+                        mapMarker.on(google_maps_1.GoogleMapsEvent.MARKER_CLICK).subscribe(function () {
+                            markerConfig_1.markerClick(mapMarker);
                         });
+                    }
+                    if (markerConfig_1.infoClick) {
+                        mapMarker.on(google_maps_1.GoogleMapsEvent.INFO_CLICK).subscribe(function () {
+                            markerConfig_1.infoClick(mapMarker);
+                        });
+                    }
+                    return mapMarker;
+                });
+            }
+            else {
+                return _this.map.addMarker({
+                    position: cluster.getCenter(),
+                    icon: _this.options.clusterIcon(cluster)
+                }).then(function (marker) {
+                    marker.on(google_maps_1.GoogleMapsEvent.MARKER_CLICK).subscribe(function () {
+                        var latLng = cluster.getMarker().map(function (m) { return m.marker.position; });
+                        if (_this.currentZoom < _this.options.spiderfyZoom) {
+                            _this.zoomToWithPadding(latLng);
+                            //this.map.moveCamera({target: latLng})
+                        }
+                        else {
+                            _this.spiderfy(marker, cluster);
+                        }
                     });
-                }
-            });
-            return Promise.all(addedMarker);
-        }).then(function (marker) {
+                    return marker;
+                });
+            }
+        });
+        Promise.all(addedMarker).then(function (marker) {
             (_a = _this.markerList).push.apply(_a, marker);
             if (_this.queuedUpdate != null) {
                 var update = _this.queuedUpdate;
@@ -192,16 +196,15 @@ var MarkerCluster = (function () {
         }
         //Remove previous spider
         this.unspiderfy();
-        this.getCirclePoints(cluster.getCenterPoint(), cluster.getMarker().length).then(function (points) {
-            Promise.all(cluster.getMarker().map(function (m, i) {
-                var newMarker = Object.assign({}, m.marker);
-                newMarker.position = toLatLng(points[i]);
-                newMarker.disableAutoPan = true;
-                return _this.map.addMarker(newMarker);
-            })).then(function (spiderfiedMarkers) { return _this.spiderfiedMarkers = spiderfiedMarkers; });
-            marker.setOpacity(0.5);
-            _this.spiderfiedCluster = marker;
-        });
+        var points = this.getCirclePoints(cluster.getCenterPoint(), cluster.getMarker().length);
+        Promise.all(cluster.getMarker().map(function (m, i) {
+            var newMarker = Object.assign({}, m.marker);
+            newMarker.position = toLatLng(points[i]);
+            newMarker.disableAutoPan = true;
+            return _this.map.addMarker(newMarker);
+        })).then(function (spiderfiedMarkers) { return _this.spiderfiedMarkers = spiderfiedMarkers; });
+        marker.setOpacity(0.5);
+        this.spiderfiedCluster = marker;
     };
     MarkerCluster.prototype.unspiderfy = function () {
         if (this.spiderfiedMarkers.length > 0) {
@@ -214,20 +217,19 @@ var MarkerCluster = (function () {
         }
     };
     MarkerCluster.prototype.getCirclePoints = function (center, count) {
-        return this.map.getCameraPosition().then(function (camera) {
-            var distance = 0.25 / Math.pow(2, camera.zoom);
-            var points = [];
-            var angle = 0;
-            var step = Math.PI * 2 / count;
-            for (var i = 0; i < count; i++) {
-                points.push({
-                    x: center.x + distance * Math.cos(angle),
-                    y: center.y + distance * Math.sin(angle)
-                });
-                angle += step;
-            }
-            return points;
-        });
+        var camera = this.map.getCameraPosition();
+        var distance = 0.25 / Math.pow(2, camera.zoom);
+        var points = [];
+        var angle = 0;
+        var step = Math.PI * 2 / count;
+        for (var i = 0; i < count; i++) {
+            points.push({
+                x: center.x + distance * Math.cos(angle),
+                y: center.y + distance * Math.sin(angle)
+            });
+            angle += step;
+        }
+        return points;
     };
     MarkerCluster.prototype.clearMap = function () {
         this.markerList.forEach(function (marker) { return marker.remove(); });
@@ -252,8 +254,7 @@ var MarkerCluster = (function () {
         this.rbush.load(this.markerObjectList);
         var _a;
     };
-    MarkerCluster.prototype.refresh = function () {
-        var _this = this;
+    MarkerCluster.prototype.reset = function () {
         this.markerObjectList = [];
         this.queuedUpdate = null;
         this.cachedCluster.clear();
@@ -261,9 +262,12 @@ var MarkerCluster = (function () {
         this.rbush.clear();
         this.clearMap();
         this.currentZoom = 0;
-        this.map.getCameraPosition().then(function (camera) {
-            _this.bufferCameraChange(camera);
-        });
+    };
+    MarkerCluster.prototype.redraw = function () {
+        this.cachedCluster.clear();
+        this.currentZoom = 0;
+        var camera = this.map.getCameraPosition();
+        this.bufferCameraChange(camera);
     };
     MarkerCluster.prototype.clusterAtScale = function (scale) {
         if (this.cachedCluster.has(scale)) {

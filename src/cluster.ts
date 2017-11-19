@@ -121,9 +121,6 @@ export class MarkerCluster {
     }, options);
 
     map.on(GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
-    map.on(GoogleMapsEvent.MAP_CLOSE).take(1).subscribe(() => {
-      console.log("Map closed");
-    });
     map.on(GoogleMapsEvent.MAP_CLICK).subscribe(() => this.unspiderfy());
     map.on(GoogleMapsEvent.MAP_READY).take(1).subscribe(() => this.redraw());
   }

@@ -103,9 +103,6 @@ var MarkerCluster = (function () {
             clusterIcon: function (cluster) { }
         }, options);
         map.on(google_maps_1.GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
-        map.on(google_maps_1.GoogleMapsEvent.MAP_CLOSE).take(1).subscribe(function () {
-            console.log("Map closed");
-        });
         map.on(google_maps_1.GoogleMapsEvent.MAP_CLICK).subscribe(function () { return _this.unspiderfy(); });
         map.on(google_maps_1.GoogleMapsEvent.MAP_READY).take(1).subscribe(function () { return _this.redraw(); });
     }

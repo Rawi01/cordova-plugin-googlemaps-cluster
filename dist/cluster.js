@@ -102,9 +102,11 @@ var MarkerCluster = (function () {
             itemToMarker: function (item) { },
             clusterIcon: function (cluster) { }
         }, options);
-        map.on(google_maps_1.GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
-        map.on(google_maps_1.GoogleMapsEvent.MAP_CLICK).subscribe(function () { return _this.unspiderfy(); });
-        map.on(google_maps_1.GoogleMapsEvent.MAP_READY).take(1).subscribe(function () { return _this.redraw(); });
+        map.on(google_maps_1.GoogleMapsEvent.MAP_READY).take(1).subscribe(function () {
+            map.on(google_maps_1.GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(function (cam) { return _this.bufferCameraChange(cam); });
+            map.on(google_maps_1.GoogleMapsEvent.MAP_CLICK).subscribe(function () { return _this.unspiderfy(); });
+            _this.redraw();
+        });
     }
     MarkerCluster.prototype.bufferCameraChange = function (camera) {
         var _this = this;

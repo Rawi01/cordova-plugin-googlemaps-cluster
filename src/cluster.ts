@@ -120,9 +120,11 @@ export class MarkerCluster {
       clusterIcon: (cluster: Cluster) => {}
     }, options);
 
-    map.on(GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
-    map.on(GoogleMapsEvent.MAP_CLICK).subscribe(() => this.unspiderfy());
-    map.on(GoogleMapsEvent.MAP_READY).take(1).subscribe(() => this.redraw());
+    map.on(GoogleMapsEvent.MAP_READY).take(1).subscribe(() => {
+      map.on(GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
+      map.on(GoogleMapsEvent.MAP_CLICK).subscribe(() => this.unspiderfy());
+      this.redraw()
+    });
   }
 
   bufferCameraChange(camera: CameraPosition<any>) {

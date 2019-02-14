@@ -1,4 +1,7 @@
-import {LatLngBounds, Marker, LatLng, GoogleMap, GoogleMapsEvent, CameraPosition} from "@ionic-native/google-maps";
+import {
+  LatLngBounds, Marker, LatLng, GoogleMap, GoogleMapsEvent, CameraPosition,
+  ILatLng, MarkerOptions
+} from '@ionic-native/google-maps';
 import * as rbush from "rbush"
 import BBox = rbush.BBox;
 import RBush = rbush.RBush;
@@ -11,7 +14,7 @@ export interface Point {
 }
 
 
-function toPoint(position: LatLng) {
+function toPoint(position: ILatLng) {
   let sin = Math.sin(position.lat * Math.PI / 180);
   let y = (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
   return {
@@ -113,26 +116,18 @@ export class MarkerCluster {
       maxZoom: 20,
       spiderfyZoom: 18,
       maxClusterZoom: 99,
-      itemToMarker: (item) => {
-          return new Marker({
-            position: item
-          })
-        },
-      clusterIcon: (cluster: Cluster) => {
-          return new Marker({
-            position: cluster.getCenter()
-          })
-        }
+      itemToMarker: (item) => {},
+      clusterIcon: (cluster: Cluster) => {}
     }, options);
 
-    map.on(GoogleMapsEvent.CAMERA_CHANGE).debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
-    map.on(GoogleMapsEvent.MAP_CLOSE).take(1).subscribe(() => {
-      console.log("Map closed");
+    map.on(GoogleMapsEvent.MAP_READY).take(1).subscribe(() => {
+      map.on(GoogleMapsEvent.CAMERA_MOVE_END).debounceTime(100).subscribe(cam => this.bufferCameraChange(cam));
+      map.on(GoogleMapsEvent.MAP_CLICK).subscribe(() => this.unspiderfy());
+      this.redraw()
     });
-    map.on(GoogleMapsEvent.MAP_CLICK).subscribe(() => this.unspiderfy());
   }
 
-  bufferCameraChange(camera: CameraPosition) {
+  bufferCameraChange(camera: CameraPosition<any>) {
     if(this.updating) {
       this.queuedUpdate = () => this.handleCameraChange(camera);
     } else {
@@ -140,7 +135,7 @@ export class MarkerCluster {
     }
   }
 
-  handleCameraChange(camera: CameraPosition) {
+  handleCameraChange(camera: CameraPosition<any>) {
     //Remove previous spider
     if(this.spiderfiedClusterClicked) {
       this.spiderfiedClusterClicked = false;
@@ -148,40 +143,44 @@ export class MarkerCluster {
       this.unspiderfy();
     }
 
-    if(this.updateCluster(camera.zoom)) {
+    if(this.updateCluster(camera.zoom || camera[0].zoom)) {
       this.clearMap();
     }
-    this.map.getVisibleRegion().then(region => {
-      let botLeft = toPoint(region.southwest);
-      let topRight = toPoint(region.northeast);
-      let addedMarker = this.cluster.filter(cluster => {
-        return !cluster.addedToMap
-          && cluster.getCenterPoint().x >= botLeft.x && cluster.getCenterPoint().x <= topRight.x
-          && cluster.getCenterPoint().y <= botLeft.y && cluster.getCenterPoint().y >= topRight.y
-      }).map(cluster => {
-        let marker = cluster.getMarker();
-        cluster.addedToMap = true;
-        if(marker.length == 1) {
-          return this.map.addMarker(marker[0].marker);
-        } else {
-          return this.map.addMarker({
-            position: cluster.getCenter(),
-            icon: this.options.clusterIcon(cluster),
-            markerClick: (marker) => {
-              let latLng = cluster.getMarker().map(m => m.marker.position);
+    let region = this.map.getVisibleRegion();
 
-              if(this.currentZoom < this.options.spiderfyZoom) {
-                this.zoomToWithPadding(latLng);
-                //this.map.moveCamera({target: latLng})
-              } else {
-                this.spiderfy(marker, cluster);
-              }
+    let botLeft = toPoint(region.southwest);
+    let topRight = toPoint(region.northeast);
+
+    let addedMarker = this.cluster.filter(cluster => {
+      return !cluster.addedToMap
+        && cluster.getCenterPoint().x >= botLeft.x && cluster.getCenterPoint().x <= topRight.x
+        && cluster.getCenterPoint().y <= botLeft.y && cluster.getCenterPoint().y >= topRight.y
+    }).map(cluster => {
+      let marker = cluster.getMarker();
+      cluster.addedToMap = true;
+      if(marker.length == 1) {
+        let markerConfig = marker[0].marker;
+        return this._addRealMarkerToMap(markerConfig);
+      } else {
+        return this.map.addMarker({
+          position: cluster.getCenter(),
+          icon: this.options.clusterIcon(cluster)
+        }).then((marker: Marker) => {
+          marker.on(GoogleMapsEvent.MARKER_CLICK).subscribe(() => {
+            let latLng = cluster.getMarker().map(m => m.marker.position);
+
+            if(this.currentZoom < this.options.spiderfyZoom) {
+              this.zoomToWithPadding(latLng);
+              //this.map.moveCamera({target: latLng})
+            } else {
+              this.spiderfy(marker, cluster);
             }
-          })
-        }
-      });
-      return Promise.all(addedMarker);
-    }).then(marker => {
+          });
+          return marker;
+        })
+      }
+    });
+    Promise.all(addedMarker).then(marker => {
       this.markerList.push(...marker);
 
       if(this.queuedUpdate != null) {
@@ -202,16 +201,15 @@ export class MarkerCluster {
     //Remove previous spider
     this.unspiderfy();
 
-    this.getCirclePoints(cluster.getCenterPoint(), cluster.getMarker().length).then(points => {
-      Promise.all(cluster.getMarker().map((m, i) => {
-        let newMarker = Object.assign({}, m.marker);
-        newMarker.position = toLatLng(points[i]);
-        newMarker.disableAutoPan = true;
-        return this.map.addMarker(newMarker);
-      })).then(spiderfiedMarkers => this.spiderfiedMarkers = spiderfiedMarkers);
-      marker.setOpacity(0.5);
-      this.spiderfiedCluster = marker;
-    })
+    let points = this.getCirclePoints(cluster.getCenterPoint(), cluster.getMarker().length);
+    Promise.all(cluster.getMarker().map((m, i) => {
+      let newMarker = Object.assign({}, m.marker);
+      newMarker.position = toLatLng(points[i]);
+      newMarker.disableAutoPan = true;
+      return this._addRealMarkerToMap(newMarker);
+    })).then(spiderfiedMarkers => this.spiderfiedMarkers = spiderfiedMarkers);
+    marker.setOpacity(0.5);
+    this.spiderfiedCluster = marker;
   }
 
   unspiderfy() {
@@ -226,23 +224,22 @@ export class MarkerCluster {
   }
 
   private getCirclePoints(center: Point, count) {
-    return this.map.getCameraPosition().then(camera => {
-      let distance = 0.25 / Math.pow(2, camera.zoom);
-      let points: Point[] = [];
-      let angle = 0;
-      let step = Math.PI*2/count;
-      for(let i = 0; i < count; i++) {
-        points.push({
-          x: center.x + distance * Math.cos(angle),
-          y: center.y + distance * Math.sin(angle)
-        });
-        angle += step;
-      }
-      return points;
-    })
+    let camera = this.map.getCameraPosition();
+    let distance = 0.25 / Math.pow(2, camera.zoom);
+    let points: Point[] = [];
+    let angle = 0;
+    let step = Math.PI*2/count;
+    for(let i = 0; i < count; i++) {
+      points.push({
+        x: center.x + distance * Math.cos(angle),
+        y: center.y + distance * Math.sin(angle)
+      });
+      angle += step;
+    }
+    return points;
   }
 
-  clearMap() {
+  private clearMap() {
     this.markerList.forEach(marker => marker.remove());
     this.markerList = [];
     this.cluster.forEach(cluster => {
@@ -269,7 +266,7 @@ export class MarkerCluster {
     this.rbush.load(this.markerObjectList);
   }
 
-  refresh() {
+  reset() {
     this.markerObjectList = [];
     this.queuedUpdate = null;
     this.cachedCluster.clear();
@@ -277,9 +274,13 @@ export class MarkerCluster {
     this.rbush.clear();
     this.clearMap();
     this.currentZoom = 0;
-    this.map.getCameraPosition().then(camera => {
-      this.bufferCameraChange(camera);
-    })
+  }
+
+  redraw() {
+    this.cachedCluster.clear();
+    this.currentZoom = 0;
+    let camera = this.map.getCameraPosition();
+    this.bufferCameraChange(camera);
   }
 
   clusterAtScale(scale): Cluster[] {
@@ -324,6 +325,22 @@ export class MarkerCluster {
       obj.addedToCluster = false;
     });
     return cluster;
+  }
+
+  private _addRealMarkerToMap(markerConfig: MarkerOptions): Promise<Marker> {
+    return this.map.addMarker(markerConfig).then((mapMarker: Marker) => {
+      if(markerConfig.markerClick) {
+        mapMarker.on(GoogleMapsEvent.MARKER_CLICK).subscribe(() => {
+          markerConfig.markerClick(mapMarker);
+        })
+      }
+      if(markerConfig.infoClick) {
+        mapMarker.on(GoogleMapsEvent.INFO_CLICK).subscribe(() => {
+          markerConfig.infoClick(mapMarker);
+        })
+      }
+      return mapMarker;
+    });
   }
 
   zoomToWithPadding(positions: LatLng[]) {

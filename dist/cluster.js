@@ -140,20 +140,8 @@ var MarkerCluster = (function () {
             var marker = cluster.getMarker();
             cluster.addedToMap = true;
             if (marker.length == 1) {
-                var markerConfig_1 = marker[0].marker;
-                return _this.map.addMarker(markerConfig_1).then(function (mapMarker) {
-                    if (markerConfig_1.markerClick) {
-                        mapMarker.on(google_maps_1.GoogleMapsEvent.MARKER_CLICK).subscribe(function () {
-                            markerConfig_1.markerClick(mapMarker);
-                        });
-                    }
-                    if (markerConfig_1.infoClick) {
-                        mapMarker.on(google_maps_1.GoogleMapsEvent.INFO_CLICK).subscribe(function () {
-                            markerConfig_1.infoClick(mapMarker);
-                        });
-                    }
-                    return mapMarker;
-                });
+                var markerConfig = marker[0].marker;
+                return _this._addRealMarkerToMap(markerConfig);
             }
             else {
                 return _this.map.addMarker({
@@ -200,7 +188,7 @@ var MarkerCluster = (function () {
             var newMarker = Object.assign({}, m.marker);
             newMarker.position = toLatLng(points[i]);
             newMarker.disableAutoPan = true;
-            return _this.map.addMarker(newMarker);
+            return _this._addRealMarkerToMap(newMarker);
         })).then(function (spiderfiedMarkers) { return _this.spiderfiedMarkers = spiderfiedMarkers; });
         marker.setOpacity(0.5);
         this.spiderfiedCluster = marker;
@@ -307,6 +295,21 @@ var MarkerCluster = (function () {
             obj.addedToCluster = false;
         });
         return cluster;
+    };
+    MarkerCluster.prototype._addRealMarkerToMap = function (markerConfig) {
+        return this.map.addMarker(markerConfig).then(function (mapMarker) {
+            if (markerConfig.markerClick) {
+                mapMarker.on(google_maps_1.GoogleMapsEvent.MARKER_CLICK).subscribe(function () {
+                    markerConfig.markerClick(mapMarker);
+                });
+            }
+            if (markerConfig.infoClick) {
+                mapMarker.on(google_maps_1.GoogleMapsEvent.INFO_CLICK).subscribe(function () {
+                    markerConfig.infoClick(mapMarker);
+                });
+            }
+            return mapMarker;
+        });
     };
     MarkerCluster.prototype.zoomToWithPadding = function (positions) {
         var bounds = new google_maps_1.LatLngBounds(positions);

@@ -1,5 +1,5 @@
 /// <reference types="rbush" />
-import { LatLngBounds, Marker, LatLng, GoogleMap, CameraPosition } from "@ionic-native/google-maps";
+import { LatLngBounds, Marker, LatLng, GoogleMap, CameraPosition } from '@ionic-native/google-maps';
 import BBox = rbush.BBox;
 import "rxjs/add/operator/debounceTime";
 import "rxjs/add/operator/take";
@@ -68,5 +68,6 @@ export declare class MarkerCluster {
     redraw(): void;
     clusterAtScale(scale: any): Cluster[];
     private clusterAtScale2(scale, markerList);
+    private _addRealMarkerToMap(markerConfig);
     zoomToWithPadding(positions: LatLng[]): void;
 }

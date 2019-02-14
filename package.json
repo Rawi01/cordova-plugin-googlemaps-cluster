@@ -30,10 +30,9 @@
     "rbush": "2.0.1"
   },
   "devDependencies": {
-    "@ionic-native/core": "^4.3.1",
-    "@ionic-native/google-maps": "^4.3.1",
+    "@ionic-native/core": "^4.20.0",
+    "@ionic-native/google-maps": "^4.20.0",
     "rxjs": "5.4.3"
   },
-  "peerDependencies": {
-  }
+  "peerDependencies": {}
 }

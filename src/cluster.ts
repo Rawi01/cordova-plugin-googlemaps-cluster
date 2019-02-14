@@ -1,7 +1,7 @@
 import {
   LatLngBounds, Marker, LatLng, GoogleMap, GoogleMapsEvent, CameraPosition,
-  ILatLng
-} from "@ionic-native/google-maps";
+  ILatLng, MarkerOptions
+} from '@ionic-native/google-maps';
 import * as rbush from "rbush"
 import BBox = rbush.BBox;
 import RBush = rbush.RBush;
@@ -160,19 +160,7 @@ export class MarkerCluster {
       cluster.addedToMap = true;
       if(marker.length == 1) {
         let markerConfig = marker[0].marker;
-        return this.map.addMarker(markerConfig).then((mapMarker: Marker) => {
-          if(markerConfig.markerClick) {
-            mapMarker.on(GoogleMapsEvent.MARKER_CLICK).subscribe(() => {
-              markerConfig.markerClick(mapMarker);
-            })
-          }
-          if(markerConfig.infoClick) {
-            mapMarker.on(GoogleMapsEvent.INFO_CLICK).subscribe(() => {
-              markerConfig.infoClick(mapMarker);
-            })
-          }
-          return mapMarker;
-        });
+        return this._addRealMarkerToMap(markerConfig);
       } else {
         return this.map.addMarker({
           position: cluster.getCenter(),
@@ -218,7 +206,7 @@ export class MarkerCluster {
       let newMarker = Object.assign({}, m.marker);
       newMarker.position = toLatLng(points[i]);
       newMarker.disableAutoPan = true;
-      return this.map.addMarker(newMarker);
+      return this._addRealMarkerToMap(newMarker);
     })).then(spiderfiedMarkers => this.spiderfiedMarkers = spiderfiedMarkers);
     marker.setOpacity(0.5);
     this.spiderfiedCluster = marker;
@@ -337,6 +325,22 @@ export class MarkerCluster {
       obj.addedToCluster = false;
     });
     return cluster;
+  }
+
+  private _addRealMarkerToMap(markerConfig: MarkerOptions): Promise<Marker> {
+    return this.map.addMarker(markerConfig).then((mapMarker: Marker) => {
+      if(markerConfig.markerClick) {
+        mapMarker.on(GoogleMapsEvent.MARKER_CLICK).subscribe(() => {
+          markerConfig.markerClick(mapMarker);
+        })
+      }
+      if(markerConfig.infoClick) {
+        mapMarker.on(GoogleMapsEvent.INFO_CLICK).subscribe(() => {
+          markerConfig.infoClick(mapMarker);
+        })
+      }
+      return mapMarker;
+    });
   }
 
   zoomToWithPadding(positions: LatLng[]) {
